@@ -13,9 +13,10 @@ pub fn run() {
         //.map(|l| l.chars().to_vec())
         //.map(parse)
         //.map(|l| sscanf!(l, \"{isize}\").unwrap())
+        //.filter(|()|)
         //.to_vec()
         //.sum::<isize>()
-        //.parse::<isize>()
+        //.count()
         ;
 
     pv!(parsed);
