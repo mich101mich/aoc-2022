@@ -25,11 +25,9 @@ pub fn run() {
         .map(|(n, from, to)| (n, from - 1, to - 1));
 
     for (n, from, to) in parsed {
-        let end = stacks[from].len() - n;
-        let moved = stacks[from]
-            .drain(end..)
-            .collect::<Vec<_>>();
-        stacks[to].extend(moved);
+        let (from, to) = stacks.two_muts(from, to).unwrap();
+        let end = from.len() - n;
+        to.extend(from.drain(end..));
     }
 
     let mut s = String::new();
@@ -64,9 +62,9 @@ pub fn part_one() {
         .map(|(n, from, to)| (n, from - 1, to - 1));
 
     for (n, from, to) in parsed {
+        let (from, to) = stacks.two_muts(from, to).unwrap();
         for _ in 0..n {
-            let c = stacks[from].pop().unwrap();
-            stacks[to].push(c);
+            to.push(from.pop().unwrap());
         }
     }
 
