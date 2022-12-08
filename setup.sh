@@ -5,7 +5,7 @@ echo "use crate::utils::*;
 pub fn run() {
     #[allow(unused_variables)]
     let input = include_str!(\"../input/$DAY.txt\");
-    // let input = "";
+    // let input = \"\";
 
     let parsed = input
         //.lines()
