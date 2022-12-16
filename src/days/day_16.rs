@@ -6,7 +6,7 @@ struct Valve {
     neighbors: Vec<(usize, usize)>,
 }
 
-fn parse(input: &'static str) -> Vec<Valve> {
+fn parse(input: &str) -> Vec<Valve> {
     let mut index_map = HashMap::new();
     index_map.insert("AA", 0);
     let mut next_index = 1;
@@ -63,101 +63,64 @@ fn parse(input: &'static str) -> Vec<Valve> {
     ret
 }
 
+fn solve(total_time: usize, input: &str) -> Vec<(u32, usize)> {
+    let valves = parse(input);
+
+    let mut reachable = vec![HashMap::new(); total_time + 1];
+    reachable[0].insert((0usize, 0u32), 0usize);
+
+    fn insert(p: (usize, u32), score: usize, reachable: &mut HashMap<(usize, u32), usize>) {
+        match reachable.entry(p) {
+            Entry::Occupied(mut entry) => {
+                let value = entry.get_mut();
+                *value = score.max(*value);
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(score);
+            }
+        }
+    }
+
+    for time in 0..total_time {
+        let current = std::mem::take(&mut reachable[time]);
+        for ((pos, opened), score) in current {
+            insert((pos, opened), score, &mut reachable[total_time]);
+            for (next, cost) in valves[pos].neighbors.iter().copied() {
+                let next_time = time + cost + 1;
+                if next_time > total_time || opened & (1 << next) != 0 {
+                    continue;
+                }
+                let next_opened = opened | (1 << next);
+                let next_score = score + valves[next].rate * (total_time - next_time);
+                insert((next, next_opened), next_score, &mut reachable[next_time]);
+            }
+        }
+    }
+
+    reachable[total_time]
+        .iter()
+        .map(|((_, opened), score)| (*opened, *score))
+        .collect()
+}
+
 #[allow(unused)]
 pub fn run() {
     #[allow(unused_variables)]
     let input = include_str!("../input/16.txt");
 
-    let valves = parse(input);
+    let states = solve(26, input);
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    struct State {
-        you_busy_till: usize,
-        you_pos: usize,
-        elephant_busy_till: usize,
-        elephant_pos: usize,
-        opened: u32,
-    }
-
-    let mut needs_update = vec![HashMap::new(); 27];
-    needs_update[0].insert(
-        State {
-            you_busy_till: 0,
-            you_pos: 0,
-            elephant_busy_till: 0,
-            elephant_pos: 0,
-            opened: 0,
-        },
-        0usize,
-    );
-
-    let mut insert =
-        |s: State, score: usize, timestamp: &mut HashMap<State, usize>| match timestamp.entry(s) {
-            Entry::Occupied(mut entry) => {
-                if *entry.get() < score {
-                    *entry.get_mut() = score;
-                }
-            }
-            Entry::Vacant(entry) => {
-                entry.insert(score);
-            }
-        };
-
-    for time in 0..26 {
-        let current = std::mem::replace(&mut needs_update[time], HashMap::new());
-        pv!(time, current.len());
-        for (state, score) in current {
-            insert(state, score, &mut needs_update[26]);
-            let mut possible_next_states = vec![];
-            if state.you_busy_till == time {
-                for (next, cost) in valves[state.you_pos].neighbors.iter().copied() {
-                    let you_busy_till = state.you_busy_till + cost + 1;
-                    if you_busy_till > 26 || state.opened & (1 << next) != 0 {
-                        continue;
-                    }
-                    let next_opened = state.opened | (1 << next);
-                    let next_score = score + valves[next].rate * (26 - you_busy_till);
-                    let next_state = State {
-                        you_busy_till,
-                        you_pos: next,
-                        opened: next_opened,
-                        ..state
-                    };
-                    let next_update = next_state.you_busy_till.min(next_state.elephant_busy_till);
-                    if next_update == time {
-                        possible_next_states.push((next_score, next_state));
-                    } else {
-                        insert(next_state, next_score, &mut needs_update[next_update]);
-                    }
-                }
-            } else {
-                possible_next_states.push((score, state));
-            }
-
-            if state.elephant_busy_till == time {
-                for (score, state) in possible_next_states {
-                    for (next, cost) in valves[state.elephant_pos].neighbors.iter().copied() {
-                        let elephant_busy_till = state.elephant_busy_till + cost + 1;
-                        if elephant_busy_till > 26 || state.opened & (1 << next) != 0 {
-                            continue;
-                        }
-                        let next_opened = state.opened | (1 << next);
-                        let next_score = score + valves[next].rate * (26 - elephant_busy_till);
-                        let next_state = State {
-                            elephant_busy_till,
-                            elephant_pos: next,
-                            opened: next_opened,
-                            ..state
-                        };
-                        let next_update =
-                            next_state.you_busy_till.min(next_state.elephant_busy_till);
-                        insert(next_state, next_score, &mut needs_update[next_update]);
-                    }
-                }
-            }
-        }
-    }
-    let best = needs_update[26].values().max().unwrap();
+    let best = states
+        .iter()
+        .enumerate()
+        .flat_map(|(i, you)| {
+            states[i + 1..]
+                .iter()
+                .filter(|elephant| you.0 & elephant.0 == 0)
+                .map(|elephant| you.1 + elephant.1)
+        })
+        .max()
+        .unwrap();
     pv!(best);
 }
 
@@ -166,40 +129,7 @@ pub fn part_one() {
     #[allow(unused_variables)]
     let input = include_str!("../input/16.txt");
 
-    let valves = parse(input);
-
-    let mut reachable = vec![HashMap::new(); 31];
-    reachable[0].insert((0usize, 0u32), 0usize);
-
-    let mut insert =
-        |p: (usize, u32), score: usize, reachable: &mut HashMap<(usize, u32), usize>| {
-            match reachable.entry(p) {
-                Entry::Occupied(mut entry) => {
-                    if *entry.get() < score {
-                        *entry.get_mut() = score;
-                    }
-                }
-                Entry::Vacant(entry) => {
-                    entry.insert(score);
-                }
-            }
-        };
-
-    for time in 0..30 {
-        let current = std::mem::replace(&mut reachable[time], HashMap::new());
-        for ((pos, opened), score) in current {
-            insert((pos, opened), score, &mut reachable[time + 1]);
-            for (next, cost) in valves[pos].neighbors.iter().copied() {
-                let next_time = time + cost + 1;
-                if next_time > 30 || opened & (1 << next) != 0 {
-                    continue;
-                }
-                let next_opened = opened | (1 << next);
-                let next_score = score + valves[next].rate * (30 - next_time);
-                insert((next, next_opened), next_score, &mut reachable[next_time]);
-            }
-        }
-    }
-    let best = reachable[30].values().max().unwrap();
+    let states = solve(30, input);
+    let best = states.iter().map(|(_, score)| score).max().unwrap();
     pv!(best);
 }
