@@ -7,29 +7,19 @@ pub fn run() {
 
     let mut parsed = byte_grid(input);
 
-    let start = parsed.find(b'S').unwrap();
-    let end = parsed.find(b'E').unwrap();
-    parsed[start] = b'a';
-    parsed[end] = b'z';
-
-    let goal = (parsed.w() + 2, 0);
+    let letter_s = parsed.find(b'S').unwrap();
+    let start = parsed.find(b'E').unwrap();
+    parsed[letter_s] = b'a';
+    parsed[start] = b'z';
 
     let neigh = parsed.manhattan();
-    let path = a_star_search(
+    let path = open_dijkstra(
         |pos, out| {
-            if parsed[pos] == b'a' {
-                out.push((goal, 0));
-            }
-            let min = parsed[pos].saturating_sub(1);
-            for p in neigh.get_all_neighbors(pos) {
-                if parsed[p] >= min {
-                    out.push((p, 1));
-                }
-            }
+            let min = parsed[pos] - 1;
+            out.extend(neigh.get_all_neighbors(pos).filter(|p| parsed[p] >= min));
         },
-        end,
-        goal,
-        |_| 0,
+        start,
+        |p, _| parsed[p] == b'a',
     )
     .unwrap();
 
@@ -52,11 +42,7 @@ pub fn part_one() {
     let path = a_star_search(
         |pos, out| {
             let max = parsed[pos] + 1;
-            for p in neigh.get_all_neighbors(pos) {
-                if parsed[p] <= max {
-                    out.push(p);
-                }
-            }
+            out.extend(neigh.get_all_neighbors(pos).filter(|p| parsed[p] <= max));
         },
         start,
         end,
