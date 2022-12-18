@@ -15,11 +15,14 @@ pub fn run() {
     let neigh = parsed.manhattan();
     let path = open_dijkstra(
         |pos, out| {
+            if parsed[pos] == b'a' {
+                return true;
+            }
             let min = parsed[pos] - 1;
             out.extend(neigh.get_all_neighbors(pos).filter(|p| parsed[p] >= min));
+            false
         },
         start,
-        |p, _| parsed[p] == b'a',
     )
     .unwrap();
 
