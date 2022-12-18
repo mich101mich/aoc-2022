@@ -9,23 +9,18 @@ pub fn run() {
     #[allow(unused_variables)]
     let input = include_str!("../input/14.txt");
 
-    let mut grid = Grid::new_clone((1000, 1000), b'.');
+    let mut grid = Grid::new_clone(p2(1000, 1000), b'.');
 
     for l in input.lines() {
         let mut parts = l
             .split(" -> ")
-            .map(|s| sscanf!(s, "{usize},{usize}").unwrap());
+            .map(|s| sscanf!(s, "{usize},{usize}").unwrap())
+            .map(|(x, y)| p2(x, y));
         let mut pos = parts.next().unwrap();
         for next in parts {
-            if pos.0 == next.0 {
-                for y in pos.1.min(next.1)..=pos.1.max(next.1) {
-                    grid[(pos.0, y)] = b'#';
-                }
-            } else {
-                for x in pos.0.min(next.0)..=pos.0.max(next.0) {
-                    grid[(x, pos.1)] = b'#';
-                }
-            }
+            let tl = p2(pos.x.min(next.x), pos.y.min(next.y));
+            let br = p2(pos.x.max(next.x) + 1, pos.y.max(next.y) + 1);
+            grid.fill_rect(tl, br, b'#');
             pos = next;
         }
     }
@@ -41,27 +36,24 @@ pub fn run() {
     grid.push(vec![b'#'; w]);
 
     let mut path = vec![];
-    let mut pos = (500, 0usize);
+    let mut pos = p2(500, 0usize);
     let mut count = 0;
     loop {
-        path.push(pos);
-        if grid[(pos.0, pos.1 + 1)] == b'.' {
-            // move down
-        } else if grid[(pos.0 - 1, pos.1 + 1)] == b'.' {
-            pos.0 -= 1;
-        } else if grid[(pos.0 + 1, pos.1 + 1)] == b'.' {
-            pos.0 += 1;
+        let down = pos + Down;
+        if let Some(next) = [down, down + Left, down + Right]
+            .iter()
+            .find(|p| grid[*p] == b'.')
+        {
+            path.push(pos);
+            pos = *next;
         } else {
-            path.pop().unwrap();
             grid[pos] = b'o';
             count += 1;
             if path.is_empty() {
                 break;
             }
             pos = path.pop().unwrap();
-            continue;
         }
-        pos.1 += 1;
     }
 
     pv!(count);
@@ -72,23 +64,18 @@ pub fn part_one() {
     #[allow(unused_variables)]
     let input = include_str!("../input/14.txt");
 
-    let mut grid = Grid::new_clone((1000, 1000), b'.');
+    let mut grid = Grid::new_clone(p2(1000, 1000), b'.');
 
     for l in input.lines() {
         let mut parts = l
             .split(" -> ")
-            .map(|s| sscanf!(s, "{usize},{usize}").unwrap());
+            .map(|s| sscanf!(s, "{usize},{usize}").unwrap())
+            .map(|(x, y)| p2(x, y));
         let mut pos = parts.next().unwrap();
         for next in parts {
-            if pos.0 == next.0 {
-                for y in pos.1.min(next.1)..=pos.1.max(next.1) {
-                    grid[(pos.0, y)] = b'#';
-                }
-            } else {
-                for x in pos.0.min(next.0)..=pos.0.max(next.0) {
-                    grid[(x, pos.1)] = b'#';
-                }
-            }
+            let tl = p2(pos.x.min(next.x), pos.y.min(next.y));
+            let br = p2(pos.x.max(next.x) + 1, pos.y.max(next.y) + 1);
+            grid.fill_rect(tl, br, b'#');
             pos = next;
         }
     }
@@ -99,27 +86,24 @@ pub fn part_one() {
     let bottom = grid.h() - 1;
 
     let mut path = vec![];
-    let mut pos = (500, 0);
+    let mut pos = p2(500, 0);
     let mut count = 0;
     loop {
-        if pos.1 == bottom {
+        if pos.y == bottom {
             break;
         }
-        path.push(pos);
-        if grid[(pos.0, pos.1 + 1)] == b'.' {
-            // move down
-        } else if grid[(pos.0 - 1, pos.1 + 1)] == b'.' {
-            pos.0 -= 1;
-        } else if grid[(pos.0 + 1, pos.1 + 1)] == b'.' {
-            pos.0 += 1;
+        let down = pos + Down;
+        if let Some(next) = [down, down + Left, down + Right]
+            .iter()
+            .find(|p| grid[*p] == b'.')
+        {
+            path.push(pos);
+            pos = *next;
         } else {
-            path.pop().unwrap();
             grid[pos] = b'o';
             count += 1;
             pos = path.pop().unwrap();
-            continue;
         }
-        pos.1 += 1;
     }
 
     pv!(count);

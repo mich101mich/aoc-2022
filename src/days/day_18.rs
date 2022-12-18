@@ -1,89 +1,38 @@
 use crate::utils::*;
 
-const DELTAS: [(isize, isize, isize); 6] = [
-    (1, 0, 0),
-    (-1, 0, 0),
-    (0, 1, 0),
-    (0, -1, 0),
-    (0, 0, 1),
-    (0, 0, -1),
-];
-fn offset(pos: (usize, usize, usize), i: usize) -> Option<(usize, usize, usize)> {
-    pos.0.checked_add_signed(DELTAS[i].0).and_then(|x| {
-        pos.1
-            .checked_add_signed(DELTAS[i].1)
-            .and_then(|y| pos.2.checked_add_signed(DELTAS[i].2).map(|z| (x, y, z)))
-    })
-}
-
 #[allow(unused)]
 pub fn run() {
     #[allow(unused_variables)]
     let input = include_str!("../input/18.txt");
-    // let input = "";
 
     let cubes = input
         .lines()
         .map(|l| sscanf!(l, "{usize},{usize},{usize}").unwrap())
+        .map(|(x, y, z)| p3(x + 1, y + 1, z + 1))
         .to_set();
 
-    let bounds = cubes.iter().fold((0, 0, 0), |(a, b, c), (x, y, z)| {
-        (a.max(*x + 1), b.max(*y + 1), c.max(*z + 1))
+    let bounds = cubes.iter().fold(Point3D::zero(), |max, p| {
+        p3(max.x.max(p.x + 2), max.y.max(p.y + 2), max.z.max(p.z + 2))
     });
 
-    let mut is_outside = vec![vec![vec![true; bounds.2]; bounds.1]; bounds.0];
+    let mut is_outside = vec![vec![vec![false; bounds.z]; bounds.y]; bounds.x];
 
-    for pos in &cubes {
-        is_outside[pos.0][pos.1][pos.2] = false;
-    }
-
-    for x in 0..bounds.0 {
-        for y in 0..bounds.1 {
-            for z in 0..bounds.2 {
-                if !is_outside[x][y][z] {
-                    continue;
-                }
-                let path = open_dijkstra(
-                    |p, out| {
-                        for i in 0..6 {
-                            let next = offset(p, i)
-                                .filter(|p| p.0 < bounds.0 && p.1 < bounds.1 && p.2 < bounds.2);
-                            if let Some(next) = next {
-                                if is_outside[next.0][next.1][next.2] {
-                                    out.push(next);
-                                }
-                            } else {
-                                return true;
-                            }
-                        }
-                        false
-                    },
-                    (x, y, z),
-                );
-                if path.is_some() {
-                    continue;
-                }
-                let mut queue = vec![(x, y, z)];
-                while let Some(next) = queue.pop() {
-                    is_outside[next.0][next.1][next.2] = false;
-                    queue.extend(
-                        (0..6)
-                            .filter_map(|i| offset(next, i))
-                            .filter(|p| is_outside[p.0][p.1][p.2]),
-                    );
-                }
-            }
-        }
+    let mut queue = vec![Point3D::zero()];
+    while let Some(next) = queue.pop() {
+        is_outside[next.x][next.y][next.z] = true;
+        queue.extend(
+            Dir3D::all()
+                .filter_map(|dir| dir.bounded_add(next, bounds))
+                .filter(|p| !cubes.contains(p) && !is_outside[p.x][p.y][p.z]),
+        );
     }
 
     let mut sum = 0;
     for pos in &cubes {
         let mut open = 6;
-        for delta in 0..6 {
-            if let Some(other) =
-                offset(*pos, delta).filter(|p| p.0 < bounds.0 && p.1 < bounds.1 && p.2 < bounds.2)
-            {
-                if !is_outside[other.0][other.1][other.2] {
+        for dir in Dir3D::all() {
+            if let Some(other) = dir.bounded_add(*pos, bounds) {
+                if !is_outside[other.x][other.y][other.z] {
                     open -= 1;
                 }
             }
@@ -102,19 +51,16 @@ pub fn part_one() {
     let cubes = input
         .lines()
         .map(|l| sscanf!(l, "{usize},{usize},{usize}").unwrap())
+        .map(|(x, y, z)| p3(x, y, z))
         .to_set();
 
     let mut sum = 0;
     for pos in &cubes {
-        let mut open = 6;
-        for delta in 0..6 {
-            if let Some(other) = offset(*pos, delta) {
-                if cubes.contains(&other) {
-                    open -= 1;
-                }
-            }
-        }
-        sum += open;
+        let closed = Dir3D::all()
+            .filter_map(|dir| dir.checked_add(*pos))
+            .filter(|p| cubes.contains(p))
+            .count();
+        sum += 6 - closed;
     }
 
     pv!(sum);
