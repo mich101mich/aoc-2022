@@ -7,10 +7,11 @@ pub fn run() {
     let input = include_str!(\"../input/$DAY.txt\");
     // let input = \"\";
 
+    // let mut grid = _grid(input);
+
     let parsed = input
         //.lines()
         //.chars()
-        //.map(|l| l.chars().to_vec())
         //.map(parse)
         //.map(|l| sscanf!(l, \"{isize}\").unwrap())
         //.filter(|()|)
