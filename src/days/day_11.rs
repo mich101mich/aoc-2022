@@ -9,29 +9,11 @@ enum Value {
     #[sscanf("old")]
     Old,
 }
-
-#[derive(Debug, Clone, Copy, FromScanf)]
-enum Op {
-    #[sscanf("+")]
-    Add,
-    #[sscanf("-")]
-    Sub,
-    #[sscanf("*")]
-    Mul,
-    #[sscanf("/")]
-    Div,
-}
-impl Op {
-    fn apply(&self, a: usize, b: &Value) -> usize {
-        let b = match b {
-            Value::Number(n) => *n,
-            Value::Old => a,
-        };
+impl Value {
+    fn get(&self, old: usize) -> usize {
         match self {
-            Op::Add => a + b,
-            Op::Sub => a - b,
-            Op::Mul => a * b,
-            Op::Div => a / b,
+            Value::Number(n) => *n,
+            Value::Old => old,
         }
     }
 }
@@ -88,7 +70,7 @@ pub fn run() {
             monkeys[i].activity += items.len();
             for item in &items {
                 let monkey = &monkeys[i];
-                let new_item = monkey.op.apply(*item, &monkey.operand) % modulus;
+                let new_item = monkey.op.apply(*item, monkey.operand.get(*item)) % modulus;
                 let target = monkey.test_target(new_item);
                 monkeys[target].items.push(new_item);
             }
@@ -117,7 +99,7 @@ pub fn part_one() {
             let items = replace(&mut monkeys[i].items, vec![]);
             for item in items {
                 monkeys[i].activity += 1;
-                let mut new_item = monkeys[i].op.apply(item, &monkeys[i].operand);
+                let mut new_item = monkeys[i].op.apply(item, monkeys[i].operand.get(item));
                 new_item /= 3;
                 let target = monkeys[i].test_target(new_item);
                 monkeys[target].items.push(new_item);
