@@ -19,16 +19,10 @@ pub fn run() {
     for &p in &blizzards {
         has_blizzard[p] = true;
     }
-    let mut next_blizzards = blizzards.clone();
     let mut sim_blizzards = |has_blizzard: &mut Grid<bool>| {
-        for ((cur, dir), next) in blizzards
-            .iter()
-            .zip(&blizzard_dirs)
-            .zip(&mut next_blizzards)
-        {
-            *next = dir.wrapping_add(*cur, bounds);
+        for (pos, dir) in blizzards.iter_mut().zip(&blizzard_dirs) {
+            *pos = dir.wrapping_add(*pos, bounds);
         }
-        std::mem::swap(&mut blizzards, &mut next_blizzards);
         has_blizzard.fill(false);
         for &p in &blizzards {
             has_blizzard[p] = true;
@@ -59,8 +53,6 @@ pub fn run() {
 
             if positions.contains(&goal) {
                 sim_blizzards(&mut has_blizzard);
-                positions.clear();
-                positions.insert(goal);
                 return minute + 1;
             }
         }
@@ -102,17 +94,11 @@ pub fn part_one() {
     let mut positions = HashSet::new();
     positions.insert(p2(0, -1isize));
 
-    let mut next_blizzards = blizzards.clone();
     let mut next_positions = HashSet::new();
     for minute in 1.. {
-        for ((cur, dir), next) in blizzards
-            .iter()
-            .zip(&blizzard_dirs)
-            .zip(&mut next_blizzards)
-        {
-            *next = dir.wrapping_add(*cur, bounds);
+        for (pos, dir) in blizzards.iter_mut().zip(&blizzard_dirs) {
+            *pos = dir.wrapping_add(*pos, bounds);
         }
-        std::mem::swap(&mut blizzards, &mut next_blizzards);
         has_blizzard.fill(false);
         for &p in &blizzards {
             has_blizzard[p] = true;
